@@ -1,5 +1,5 @@
 import pandas as pd
-import matplotlib.pylab as pylab
+from matplotlib import pylab
 from sklearn import linear_model
 from sklearn import metrics 
 
@@ -41,22 +41,28 @@ def persist_performance(y, y_pred, filename):
     rmsd_score = metrics.mean_squared_error(y, y_pred)
     
     output = "R2 score: {}\nRMSD: {}".format(r2_score, rmsd_score)
-    print(output)
-    with open(filename, "w") as text_file:
+ 
+    with open(filename + ".csv", "w") as text_file:
         text_file.write(output)
+        
+    pylab.scatter(y, y_pred)
+    
+    pylab.xlabel("Real Price")
+    pylab.ylabel("Predicted Price")
+    pylab.savefig(filename + ".png")
     
 def main():
-    filename = "../data/diamonds.csv"
+    filename = "/tmp/diamonds.csv"
     dataset = load_data(filename)[:500]
     dataset = add_features(dataset)
     X, Y = create_x_y_from_dataframe(dataset)
     model = create_model(X, Y)
     predictions = score_data(X, model)
     
-    #pylab.scatter(Y, predictions)
-    filename_output = "/tmp/diamonds_with_predictions.csv"
+    
+    filename_output = "/tmp/diamonds_predictions_from_main.csv"
     persist_scores(dataset, predictions, filename_output)
-    persist_performance(Y, predictions, "/tmp/diamonds_performance.txt")
+    persist_performance(Y, predictions, "/tmp/diamonds_performance_main")
     
     
 if __name__=="__main__":
