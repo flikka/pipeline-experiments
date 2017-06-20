@@ -1,6 +1,6 @@
 import airflow.operators.python_operator as po
 from airflow.models import DAG
-from load_data import *
+import diamonds.diapipe as dp
 
 import datetime
 
@@ -8,23 +8,22 @@ import datetime
 def add_features_xcom(**kwargs):
     task_instance = kwargs['ti']
     dataframe_loaded = task_instance.xcom_pull(task_ids='load_data')
-    
     dataframe_loaded = dataframe_loaded[:500]
-    added_features_df = add_features(dataframe_loaded)
-    return added_features_df    
+   
+    return dp.add_features(dataframe_loaded)    
     
 def create_x_y_from_dataframe_xcom(**kwargs):
     task_instance = kwargs['ti']
     dataframe_features_added = task_instance.xcom_pull(task_ids='add_features')
     
-    X, Y = create_x_y_from_dataframe(dataframe_features_added)
+    X, Y = dp.create_x_y_from_dataframe(dataframe_features_added)
     return X, Y
         
 def create_model_xcom(**kwargs):
     task_instance = kwargs['ti']
     X, Y = task_instance.xcom_pull(task_ids='create_XY_input')
     
-    model = create_model(X, Y)
+    model = dp.create_model(X, Y)
     return model
     
 def score_data_xcom(**kwargs):
@@ -32,7 +31,7 @@ def score_data_xcom(**kwargs):
     model = task_instance.xcom_pull(task_ids='create_model')
     X = task_instance.xcom_pull(task_ids='create_XY_input')[0]
     
-    return score_data(X, model)
+    return dp.score_data(X, model)
 
 
 def persist_scores_xcom(filename, **kwargs):
@@ -40,14 +39,14 @@ def persist_scores_xcom(filename, **kwargs):
     dataset = task_instance.xcom_pull(task_ids='add_features')
     predictions = task_instance.xcom_pull(task_ids='score_data')    
     
-    return persist_scores(dataset, predictions, filename)
+    return dp.persist_scores(dataset, predictions, filename)
 
 def persist_performance_xcom(filename, **kwargs):
     task_instance = kwargs['ti']
     Y = task_instance.xcom_pull(task_ids='create_XY_input')[1]
     predictions = task_instance.xcom_pull(task_ids='score_data')    
     
-    persist_performance(Y, predictions, filename)
+    dp.persist_performance(Y, predictions, filename)
 
 
 args = {
@@ -59,8 +58,8 @@ the_dag = DAG(dag_id='diamond_logistic_regressor', schedule_interval=None, defau
 
 load_data_task = po.PythonOperator(
     task_id='load_data',
-    python_callable=load_data,
-    op_kwargs={'filename':'/tmp/diamonds.csv'},
+    python_callable=dp.load_data,
+    op_kwargs={'url':'https://git.statoil.no/data-science/pipeline-experiements/raw/9007d95ef73afcd2f1751bfad8c69e4ffa2607f7/data/diamonds.csv'},
     dag=the_dag)
 
 add_features_task = po.PythonOperator(
@@ -93,7 +92,7 @@ persist_scores_task = po.PythonOperator(
     task_id='persist_scores',
     python_callable=persist_scores_xcom,
     provide_context = True,
-    op_kwargs={'filename':"/tmp/diamonds_with_predictions.csv"},
+    op_kwargs={'filename':"/tmp/diamonds_with_predictions_airflow.csv"},
     dag=the_dag)
 
 
@@ -101,8 +100,11 @@ persist_performance_task = po.PythonOperator(
     task_id='persist_performance',
     python_callable=persist_performance_xcom,
     provide_context = True,
-    op_kwargs={'filename':"/tmp/diamonds_performance"},
+    op_kwargs={'filename':"/tmp/diamonds_performance_airflow"},
     dag=the_dag)
 
-load_data_task >> add_features_task >> create_xy_task >> create_model_task >> score_data_task >> persist_scores_task >> persist_performance_task
+load_data_task >> add_features_task >> create_xy_task >> create_model_task >> score_data_task 
+score_data_task.set_downstream(persist_scores_task)
+score_data_task.set_downstream(persist_performance_task)
+    
 

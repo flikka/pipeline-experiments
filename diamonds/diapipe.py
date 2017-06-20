@@ -1,11 +1,14 @@
 import pandas as pd
+import requests
+from io import StringIO
 from matplotlib import pylab
 from sklearn import linear_model
 from sklearn import metrics 
 
 
-def load_data(filename):
-    diamonds = pd.read_csv(filename)
+def load_data(url):
+    response = requests.get(url, verify=False)
+    diamonds = pd.read_csv(StringIO(response.text))
     print("Initial dataset, summary:")
     print(diamonds.describe())
     return diamonds
@@ -52,8 +55,8 @@ def persist_performance(y, y_pred, filename):
     pylab.savefig(filename + ".png")
     
 def main():
-    filename = "/tmp/diamonds.csv"
-    dataset = load_data(filename)[:500]
+    url = "https://git.statoil.no/data-science/pipeline-experiements/raw/9007d95ef73afcd2f1751bfad8c69e4ffa2607f7/data/diamonds.csv"
+    dataset = load_data(url)[:500]
     dataset = add_features(dataset)
     X, Y = create_x_y_from_dataframe(dataset)
     model = create_model(X, Y)
