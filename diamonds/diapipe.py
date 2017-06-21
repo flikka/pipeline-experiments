@@ -1,7 +1,11 @@
 import pandas as pd
 import requests
 from io import StringIO
+
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pylab
+
 from sklearn import linear_model
 from sklearn import metrics 
 
