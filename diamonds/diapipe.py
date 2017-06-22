@@ -59,7 +59,7 @@ def persist_performance(y, y_pred, filename):
     pylab.savefig(filename + ".png")
     
 def main():
-    url = "https://git.statoil.no/data-science/pipeline-experiements/raw/9007d95ef73afcd2f1751bfad8c69e4ffa2607f7/data/diamonds.csv"
+    url = "https://raw.githubusercontent.com/flikka/pipeline-experiments/master/data/diamonds.csv"
     dataset = load_data(url)[:500]
     dataset = add_features(dataset)
     X, Y = create_x_y_from_dataframe(dataset)
