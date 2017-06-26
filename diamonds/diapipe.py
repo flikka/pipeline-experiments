@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 from io import StringIO
+import uuid
 
 import matplotlib
 matplotlib.use('Agg')
@@ -48,8 +49,8 @@ def persist_performance(y, y_pred, filename):
     rmsd_score = metrics.mean_squared_error(y, y_pred)
     
     output = "R2 score: {}\nRMSD: {}".format(r2_score, rmsd_score)
- 
-    with open(filename + ".csv", "w") as text_file:
+
+    with open(filename, "w") as text_file:
         text_file.write(output)
         
     pylab.scatter(y, y_pred)
@@ -65,11 +66,12 @@ def main():
     X, Y = create_x_y_from_dataframe(dataset)
     model = create_model(X, Y)
     predictions = score_data(X, model)
+
+    uid = str(uuid.uuid4())
     
-    
-    filename_output = "/tmp/diamonds_predictions_from_main.csv"
+    filename_output = "/tmp/diamonds_predictions_from_main-"+uid +".csv"
     persist_scores(dataset, predictions, filename_output)
-    persist_performance(Y, predictions, "/tmp/diamonds_performance_main")
+    persist_performance(Y, predictions, "/tmp/diamonds_performance_main-" + uid)
     
     
 if __name__=="__main__":
