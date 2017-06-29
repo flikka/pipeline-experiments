@@ -33,7 +33,7 @@ def load_from_azure_sql():
     connection = pyodbc.connect('DRIVER='+ driver +';PORT=1433;SERVER='+SQL_SERVER+'\
         ;PORT=1443;DATABASE='+DATABASE+';UID='+DB_USER+';PWD='+ DB_PW)
     
-    
+    print("Downloading data from database {} on server {}".format(DATABASE, SQL_SERVER))
     dataframe = pandas.read_sql("SELECT * from diamonds", connection) 
     return dataframe
     
