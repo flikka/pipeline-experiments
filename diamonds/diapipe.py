@@ -1,22 +1,23 @@
 import pandas as pd
-import requests
-from io import StringIO
 import uuid
-
 import matplotlib
+from io import BytesIO
 matplotlib.use('Agg')
 from matplotlib import pylab
 
 from sklearn import linear_model
 from sklearn import metrics 
 
+import azure_data
 
-def load_data(url):
-    response = requests.get(url, verify=False)
-    diamonds = pd.read_csv(StringIO(response.text))
+def load_antwerps_from_blob(filename):
+    input_blob = azure_data.download_input_blob(filename) 
+    diamonds = pd.read_csv(BytesIO(input_blob.content))
+    
     print("Initial dataset, summary:")
     print(diamonds.describe())
     return diamonds
+
 
 def add_features(dataset):
     dataset["volume"] = dataset["x"] * dataset["y"] * dataset["z"]
@@ -41,37 +42,37 @@ def score_data(dataset, model):
 
 def persist_scores(dataset, scores, filename):
     dataset["price_predicted"] = scores
-    dataset.to_csv(filename)
+    data_with_scores = dataset.to_csv()
+    azure_data.upload_text_to_blob(data_with_scores, filename)
     return dataset
 
 def persist_performance(y, y_pred, filename):
     r2_score = metrics.r2_score(y, y_pred)
     rmsd_score = metrics.mean_squared_error(y, y_pred)
-    
     output = "R2 score: {}\nRMSD: {}".format(r2_score, rmsd_score)
-
-    with open(filename, "w") as text_file:
-        text_file.write(output)
+    azure_data.upload_text_to_blob(output, filename + ".txt")
         
     pylab.scatter(y, y_pred)
-    
     pylab.xlabel("Real Price")
     pylab.ylabel("Predicted Price")
-    pylab.savefig(filename + ".png")
+    scatterIO = BytesIO()
+    pylab.savefig(scatterIO)
+    scatterIO.seek(0)
+    azure_data.upload_bytes_to_blob(scatterIO, filename + ".png")
     
 def main():
-    url = "https://raw.githubusercontent.com/flikka/pipeline-experiments/master/data/diamonds.csv"
-    dataset = load_data(url)[:500]
-    dataset = add_features(dataset)
+    
+    dataset_1 = load_antwerps_from_blob("diamonds.csv")[0:1000]
+    
+    dataset = add_features(dataset_1)
     X, Y = create_x_y_from_dataframe(dataset)
     model = create_model(X, Y)
     predictions = score_data(X, model)
 
     uid = str(uuid.uuid4())
-    
-    filename_output = "/tmp/diamonds_predictions_from_main-"+uid +".csv"
-    persist_scores(dataset, predictions, filename_output)
-    persist_performance(Y, predictions, "/tmp/diamonds_performance_main-" + uid)
+       
+    persist_scores(dataset, predictions, "diamonds_predictions_from_main-"+uid +".csv")
+    persist_performance(Y, predictions, "diamonds_performance_main-" + uid)
     
     
 if __name__=="__main__":
