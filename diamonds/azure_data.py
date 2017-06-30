@@ -29,7 +29,7 @@ def upload_bytes_to_blob(bytesIO, blob_name):
 
 def load_from_azure_sql():
     
-    driver= '{/opt/microsoft/msodbcsql/lib64/libmsodbcsql-13.1.so.9.0}'
+    driver= '{ODBC Driver 13 for SQL Server}'
     connection = pyodbc.connect('DRIVER='+ driver +';PORT=1433;SERVER='+SQL_SERVER+'\
         ;PORT=1443;DATABASE='+DATABASE+';UID='+DB_USER+';PWD='+ DB_PW)
     
@@ -46,6 +46,8 @@ def wipe_blob_container(container_name):
             blob_service.delete_blob(CONTAINER_NAME, blob.name)
     
 if __name__=="__main__":
+    pass
     #print(download_input("diamonds.csv"))
     #load_from_azure_sql()
     #wipe_blob_container(CONTAINER_NAME)
+    
