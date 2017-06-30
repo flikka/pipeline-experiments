@@ -37,8 +37,15 @@ def load_from_azure_sql():
     dataframe = pandas.read_sql("SELECT * from diamonds", connection) 
     return dataframe
     
+def wipe_blob_container(container_name):
+    blob_service = BlockBlobService(account_name=ACCOUNT_NAME, account_key=ACCOUNT_KEY)
+    generator = blob_service.list_blobs(container_name)
+    for blob in generator:
+        if blob.name.startswith("results"):
+            print("Deleting blob: {}".format(blob.name))
+            blob_service.delete_blob(CONTAINER_NAME, blob.name)
     
 if __name__=="__main__":
     #print(download_input("diamonds.csv"))
-    load_from_azure_sql()
-    
+    #load_from_azure_sql()
+    #wipe_blob_container(CONTAINER_NAME)

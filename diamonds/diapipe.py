@@ -10,7 +10,7 @@ from sklearn import metrics
 
 import azure_data
 
-def load_antwerps_from_blob(filename):
+def load_diamonds_from_blob(filename):
     input_blob = azure_data.download_input_blob(filename) 
     diamonds = pd.read_csv(BytesIO(input_blob.content))
     
@@ -33,10 +33,10 @@ def create_x_y_from_dataframe(dataset):
     return X, price
 
 def create_model(X, Y):
-    log_reg = linear_model.LogisticRegression()
-    log_reg.fit(X, Y)
+    lin_reg = linear_model.LinearRegression()
+    lin_reg.fit(X, Y)
     
-    return log_reg
+    return lin_reg
 
 def score_data(dataset, model):
     price_predicted = model.predict(dataset)
@@ -63,14 +63,15 @@ def persist_performance(y, y_pred, filename):
     pylab.savefig(scatterIO)
     scatterIO.seek(0)
     azure_data.upload_bytes_to_blob(scatterIO, filename + ".png")
+    return output
     
 def main():
     # A series of steps that are common to many ML pipelines. 
     # Note: currently the crucial test/validation step is missing.
     
     # 1: Load data from two sources
-    from_blob = load_antwerps_from_blob("diamonds.csv")[0:500]
-    from_sql = azure_data.load_from_azure_sql()[500:1000]
+    from_blob = load_diamonds_from_blob("diamonds.csv")
+    from_sql = azure_data.load_from_azure_sql()
     
     # 2: Join data
     dataset_joined = join_blob_and_sql(from_blob, from_sql)
@@ -78,20 +79,29 @@ def main():
     # 3: Add features
     dataset_extra_features = add_features(dataset_joined)
     
-    # 4: Create target (Y) and input(X) for ML model building
-    X, Y = create_x_y_from_dataframe(dataset_extra_features)
+    # 4: Create a training set, the first X diamonds,  and a test/validation set
+    training_data = dataset_extra_features[:100]
     
-    # 5: Build model
-    model = create_model(X, Y)
+    test_data = dataset_extra_features[73000:74000]
     
-    # 6: Predict based on model
-    predictions = score_data(X, model)
+    # 5: Create target (Y) and input(X) for ML model building
+    X_train, Y_train = create_x_y_from_dataframe(training_data)
+    
+    # 6: Build model
+    model = create_model(X_train, Y_train)
+    
+    # 7: Predict based on model
+    X_test, Y_test = create_x_y_from_dataframe(test_data)
+    predictions = score_data(X_test, model)
 
     uid = str(uuid.uuid4())
-       
-    # 7: Store results
-    persist_scores(dataset_extra_features, predictions, "diamonds_predictions_from_main-"+uid +".csv")
-    persist_performance(Y, predictions, "diamonds_performance_main-" + uid)
+      
+    # 8: Store results
+    modelinfo = model.__class__.__name__
+    modelinfo = modelinfo + "-" + str(len(X_train)) + "train-"
+    
+    persist_scores(test_data, predictions, "results/predictions/"+ modelinfo +uid +".csv")
+    print(persist_performance(Y_test, predictions, "results/performance/"+ modelinfo + uid))
     
     
 if __name__=="__main__":
